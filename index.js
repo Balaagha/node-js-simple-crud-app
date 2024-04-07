@@ -1,54 +1,36 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+import express from 'express';
+import colors from 'colors';
+import morgan from 'morgan';
+import { userRoutes } from './routes/userRoutes.js';
+import { workerRoutes } from './routes/workerRoutes.js';
 
 const PORT = process.env.PORT;
-const DB_NAME = process.env.DB_NAME;
-const DB_USER_NAME = process.env.DB_USER_NAME;
-const DB_PASSWORD = process.env.DB_PASSWORD;
-const DB_HOST_NAME = process.env.DB_HOST_NAME;
 
-const express = require('express');
 const app = express();
-const mysql = require('mysql');
+app.use(express.json());
+app.use(morgan('dev'));
 
-const connection = mysql.createConnection({
-    host: DB_HOST_NAME,
-    user: DB_USER_NAME,
-    password: DB_PASSWORD,
-    database: DB_NAME
-});
-
-// Veritabanına bağlan
-connection.connect(error => {
-    if (error) throw error;
-    console.log("Veritabanına başarıyla bağlandı.");
-});
-
-// Kullanıcıları listele
-app.get('/users', (req, res) => {
-    connection.query('SELECT * FROM users', (error, results) => {
-        if (error) throw error;
-        res.send(results);
-    });
-});
-
+// Routes
+app.use('/api/user/v1', userRoutes);
+app.use('/api/worker/v1', workerRoutes);
 app.get('/', (req, res) => {
     res.status(200).json({
         msg: "Working!"
     });
 });
 
-app.get('/login', (req, res) => {
-    res.status(200).json({
-        msg: "Login user!"
-    });
-});
-
-app.get('/register', (req, res) => {
-    res.status(200).json({
-        msg: "Register user!"
+// Error logging
+app.use((err, req, res, next) => {
+    console.error(err.stack); // Hata mesajını konsola yazdır
+    res.status(err.status || 500);
+    res.json({
+        error: {
+            mesaj: err.message || 'error happening in server.'
+        }
     });
 });
 
 app.listen(PORT, () => {
-    console.log(`backend running on ${PORT}`);
+    console.log(`backend running on ${PORT}`.bgMagenta.white);
 });
