@@ -27,6 +27,7 @@ const createWorker = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: `user(${id}) record`,
+                data: "success"
             });
         }
     } catch (e) {
@@ -121,6 +122,7 @@ const createTransaction = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: `transaction successfully created`,
+                data: "success"
             });
         }
     } catch (e) {
