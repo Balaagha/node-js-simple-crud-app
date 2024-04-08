@@ -159,16 +159,17 @@ const getAllTransaction = async(req, res) => {
         }
 
         // run query
-        const [rows] = await mysqlPool.query(query, queryParams);
+        const [workerListResponse] = await mysqlPool.query('SELECT name, id FROM workers');
+        const [transactionListResponse] = await mysqlPool.query(query, queryParams);
 
-        if (!rows) {
+        if (!transactionListResponse && !workerListResponse) {
             return res.status(500).send({
                 success: false,
                 message: "Fail to make db operation",
             });
         } else {
             let total = 0;
-            rows.forEach(row => {
+            transactionListResponse.forEach(row => {
                 if (row.transactionType === "+") {
                     total += row.transactionAmount;
                 } else if (row.transactionType === "-") {
@@ -179,7 +180,8 @@ const getAllTransaction = async(req, res) => {
                 success: true,
                 message: "All user records",
                 data: {
-                    "transactionList": rows,
+                    "transactionList": transactionListResponse,
+                    "workerList": workerListResponse,
                     "total": total
                 },
             });
