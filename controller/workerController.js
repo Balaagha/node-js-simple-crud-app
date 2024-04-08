@@ -170,12 +170,16 @@ const getAllTransaction = async(req, res) => {
             });
         } else {
             let total = 0;
+            console.log("total baslangicda beledir: " + total)
             transactionListResponse.forEach(row => {
                 if (row.transactionType === "+") {
+                    console.log("total bu degeri elave edirik: " + total)
                     total += row.transactionAmount;
                 } else if (row.transactionType === "-") {
+                    console.log("total bu degeri cixiriq: " + total)
                     total -= row.transactionAmount;
                 }
+                console.log("operation sonrasi total: " + total)
             });
             return res.status(200).send({
                 success: true,
