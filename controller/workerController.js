@@ -173,10 +173,10 @@ const getAllTransaction = async(req, res) => {
             console.log("total baslangicda beledir: " + total)
             transactionListResponse.forEach(row => {
                 if (row.transactionType === "+") {
-                    console.log("total bu degeri elave edirik: " + total)
+                    console.log("total bu degeri elave edirik: " + row.transactionAmount)
                     total += row.transactionAmount;
                 } else if (row.transactionType === "-") {
-                    console.log("total bu degeri cixiriq: " + total)
+                    console.log("total bu degeri cixiriq: " + row.transactionAmount)
                     total -= row.transactionAmount;
                 }
                 console.log("operation sonrasi total: " + total)
