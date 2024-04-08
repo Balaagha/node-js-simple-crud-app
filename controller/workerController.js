@@ -91,9 +91,10 @@ const createTransaction = async(req, res) => {
         connection = await mysqlPool.getConnection();
         await connection.beginTransaction();
 
-        let { workerId, transactionType, createdTime, transactionAmount } = req.body;
+        let { workerId, transactionType, transactionDesc, createdTime, transactionAmount } = req.body;
 
         createdTime = (typeof createdTime === 'undefined' || createdTime === '') ? Date.now() : createdTime;
+        transactionDesc = (typeof transactionDesc === 'undefined') ? '' : transactionDesc;
         console.log("timestamp" + createdTime);
 
         // get selectedWorker data
@@ -109,7 +110,7 @@ const createTransaction = async(req, res) => {
 
         // update db for worker salary
         const [updateWorkerResult] = await connection.query('UPDATE workers SET salaryDebt = ? WHERE id = ?', [updatedSalary, workerId]);
-        const [createTransactionResult] = await connection.query('INSERT INTO workersTransactions (createdTime, transactionAmount, transactionType, workerId) VALUES (?, ?, ?, ?)', [createdTime, transactionAmount, transactionType, workerId]);
+        const [createTransactionResult] = await connection.query('INSERT INTO workersTransactions (createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerName) VALUES (?, ?, ?, ?, ?, ?)', [createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerData[0].name]);
         console.log("updateWorkerResult => " + updateWorkerResult);
         console.log("createTransactionResult => " + createTransactionResult);
         if (!createTransactionResult || !updateWorkerResult) {
