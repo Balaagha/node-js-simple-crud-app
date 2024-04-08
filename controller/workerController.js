@@ -74,7 +74,7 @@ const getWorkerById = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: `user(${id}) record`,
-                data: rows,
+                data: rows[0],
             });
         }
     } catch (e) {
@@ -167,10 +167,21 @@ const getAllTransaction = async(req, res) => {
                 message: "Fail to make db operation",
             });
         } else {
+            let total = 0;
+            rows.forEach(row => {
+                if (row.transactionType === "+") {
+                    total += row.transactionAmount;
+                } else if (row.transactionType === "-") {
+                    total -= row.transactionAmount;
+                }
+            });
             return res.status(200).send({
                 success: true,
                 message: "All user records",
-                data: rows,
+                data: {
+                    "transactionList": rows,
+                    "total": total
+                },
             });
         }
     } catch (e) {
