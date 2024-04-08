@@ -159,6 +159,7 @@ const getAllTransaction = async(req, res) => {
             query += ' AND workerId = ?';
             queryParams.push(req.query.workerId);
         }
+        query += ' ORDER BY createdTime DESC'
 
         // run query
         const [workerListResponse] = await mysqlPool.query('SELECT name, id FROM workers');
