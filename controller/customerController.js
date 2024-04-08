@@ -1,21 +1,20 @@
 import { mysqlPool } from "../config/db.js";
 import Decimal from "decimal.js";
 
-const createWorker = async(req, res) => {
+const createCustomer = async(req, res) => {
     try {
-        let { name, salaryDebt, createdTime } = req.body;
+        let { name, debt, createdTime } = req.body;
         createdTime = (typeof createdTime === 'undefined' || createdTime === '') ? Date.now() : createdTime;
-        console.log("timestamp" + createdTime);
 
         let query = '';
         let queryParams = [];
 
-        if (typeof salaryDebt === 'undefined' || salaryDebt === '') {
-            query = 'INSERT INTO workers (name, createdTime) VALUES (?, ?)';
+        if (typeof debt === 'undefined' || debt === '') {
+            query = 'INSERT INTO customers (name, createdTime) VALUES (?, ?)';
             queryParams = [name, createdTime];
         } else {
-            query = 'INSERT INTO workers (name, salaryDebt, createdTime) VALUES (?, ?, ?)';
-            queryParams = [name, salaryDebt, createdTime];
+            query = 'INSERT INTO customers (name, debt, createdTime) VALUES (?, ?, ?)';
+            queryParams = [name, debt, createdTime];
         }
         const [result] = await mysqlPool.query(query, queryParams);
         const id = result.insertId;
@@ -39,9 +38,9 @@ const createWorker = async(req, res) => {
         });
     }
 }
-const getAllWorker = async(req, res) => {
+const getAllCustomer = async(req, res) => {
     try {
-        const [rows] = await mysqlPool.query('SELECT * FROM workers');
+        const [rows] = await mysqlPool.query('SELECT * FROM customers');
         if (!rows) {
             return res.status(500).send({
                 success: false,
@@ -49,7 +48,7 @@ const getAllWorker = async(req, res) => {
             });
         } else {
             return res.status(200).send({
-                success: true,
+                success: false,
                 message: "All user records",
                 data: rows,
             });
@@ -62,10 +61,10 @@ const getAllWorker = async(req, res) => {
         });
     }
 }
-const getWorkerById = async(req, res) => {
+const getCustomerById = async(req, res) => {
     try {
         const id = req.params.id;
-        const [rows] = await mysqlPool.query(`SELECT * FROM workers WHERE id =${id}`);
+        const [rows] = await mysqlPool.query(`SELECT * FROM customers WHERE id =${id}`);
         if (!rows) {
             return res.status(404).send({
                 success: false,
@@ -86,35 +85,35 @@ const getWorkerById = async(req, res) => {
         });
     }
 }
-const createTransaction = async(req, res) => {
+const createCustomerTransaction = async(req, res) => {
     let connection;
     try {
         connection = await mysqlPool.getConnection();
         await connection.beginTransaction();
 
-        let { workerId, transactionType, transactionDesc, createdTime, transactionAmount } = req.body;
+        let { customerId, transactionType, transactionDesc, createdTime, transactionAmount } = req.body;
 
         createdTime = (typeof createdTime === 'undefined' || createdTime === '') ? Date.now() : createdTime;
         transactionDesc = (typeof transactionDesc === 'undefined') ? '' : transactionDesc;
         console.log("timestamp" + createdTime);
 
-        // get selectedWorker data
-        const [workerData] = await mysqlPool.query(`SELECT * FROM workers WHERE id =${workerId}`);
-        let updatedSalary = parseFloat(workerData[0].salaryDebt);
+        // get selectedCustomer data
+        const [customerData] = await mysqlPool.query(`SELECT * FROM customers WHERE id =${customerId}`);
+        let updatedDebt = parseFloat(customerData[0].debt);
 
-        // update worker updatedSalary by transactionType
+        // update customer updatedDebt by transactionType
         if (transactionType === '+') {
-            updatedSalary = workerData[0].salaryDebt + parseFloat(transactionAmount)
+            updatedDebt = customerData[0].debt + parseFloat(transactionAmount)
         } else if (transactionType === '-') {
-            updatedSalary = workerData[0].salaryDebt - parseFloat(transactionAmount)
+            updatedDebt = customerData[0].debt - parseFloat(transactionAmount)
         }
 
-        // update db for worker salary
-        const [updateWorkerResult] = await connection.query('UPDATE workers SET salaryDebt = ? WHERE id = ?', [updatedSalary, workerId]);
-        const [createTransactionResult] = await connection.query('INSERT INTO workersTransactions (createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerName) VALUES (?, ?, ?, ?, ?, ?)', [createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerData[0].name]);
-        console.log("updateWorkerResult => " + updateWorkerResult);
+        // update db for customer salary
+        const [updateCustomerResult] = await connection.query('UPDATE customers SET debt = ? WHERE id = ?', [updatedDebt, customerId]);
+        const [createTransactionResult] = await connection.query('INSERT INTO customersTransactions (createdTime, transactionAmount, transactionType, transactionDesc, customerId, customerName) VALUES (?, ?, ?, ?, ?, ?)', [createdTime, transactionAmount, transactionType, transactionDesc, customerId, customerData[0].name]);
+        console.log("updateCustomerResult => " + updateCustomerResult);
         console.log("createTransactionResult => " + createTransactionResult);
-        if (!createTransactionResult || !updateWorkerResult) {
+        if (!createTransactionResult || !updateCustomerResult) {
             return res.status(500).send({
                 success: false,
                 message: `Fail to make db operation`,
@@ -139,10 +138,10 @@ const createTransaction = async(req, res) => {
         if (connection) await connection.release();
     }
 }
-const getAllTransaction = async(req, res) => {
+const getAllCustomerTransaction = async(req, res) => {
     try {
         // query all transactions
-        let query = 'SELECT * FROM workersTransactions WHERE 1=1';
+        let query = 'SELECT * FROM customersTransactions WHERE 1=1';
         const queryParams = [];
 
         if (req.query.selectedTime) {
@@ -154,18 +153,18 @@ const getAllTransaction = async(req, res) => {
             query += ' AND createdTime BETWEEN ? AND ?';
             queryParams.push(req.query.fromTime, req.query.toTime);
         }
-        // workerId checkpoint
-        if (req.query.workerId) {
-            query += ' AND workerId = ?';
-            queryParams.push(req.query.workerId);
+        // customerId checkpoint
+        if (req.query.customerId) {
+            query += ' AND customerId = ?';
+            queryParams.push(req.query.customerId);
         }
         query += ' ORDER BY createdTime DESC'
 
         // run query
-        const [workerListResponse] = await mysqlPool.query('SELECT name, id FROM workers');
+        const [customerListResponse] = await mysqlPool.query('SELECT name, id FROM customers');
         const [transactionListResponse] = await mysqlPool.query(query, queryParams);
 
-        if (!transactionListResponse && !workerListResponse) {
+        if (!transactionListResponse && !customerListResponse) {
             return res.status(500).send({
                 success: false,
                 message: "Fail to make db operation",
@@ -188,7 +187,7 @@ const getAllTransaction = async(req, res) => {
                 message: "All user records",
                 data: {
                     "transactionList": transactionListResponse,
-                    "workerList": workerListResponse,
+                    "customerList": customerListResponse,
                     "total": total
                 },
             });
@@ -202,4 +201,4 @@ const getAllTransaction = async(req, res) => {
     }
 }
 
-export { createWorker, getAllWorker, getWorkerById, createTransaction, getAllTransaction };
+export { createCustomer, getAllCustomer, getCustomerById, createCustomerTransaction, getAllCustomerTransaction };
