@@ -1,4 +1,5 @@
 import { mysqlPool } from "../config/db.js";
+import Decimal from "decimal.js";
 
 const createWorker = async(req, res) => {
     try {
@@ -169,18 +170,22 @@ const getAllTransaction = async(req, res) => {
                 message: "Fail to make db operation",
             });
         } else {
-            let total = 0;
-            console.log("total baslangicda beledir: " + total)
+            let total = new Decimal(0);
+            console.log("total başlangıçta şöyledir: " + total);
+
             transactionListResponse.forEach(row => {
+                let transactionAmount = new Decimal(row.transactionAmount);
+
                 if (row.transactionType === "+") {
-                    console.log("total bu degeri elave edirik: " + row.transactionAmount)
-                    total += row.transactionAmount;
+                    console.log("total bu değeri ekliyoruz: " + transactionAmount);
+                    total = total.plus(transactionAmount);
                 } else if (row.transactionType === "-") {
-                    console.log("total bu degeri cixiriq: " + row.transactionAmount)
-                    total -= row.transactionAmount;
+                    console.log("total bu değeri çıkarıyoruz: " + transactionAmount);
+                    total = total.minus(transactionAmount);
                 }
-                console.log("operation sonrasi total: " + total)
+                console.log("işlem sonrası total: " + total);
             });
+            total = total.toNumber();
             return res.status(200).send({
                 success: true,
                 message: "All user records",
