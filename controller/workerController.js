@@ -100,20 +100,18 @@ const createTransaction = async(req, res) => {
 
         // get selectedWorker data
         const [workerData] = await mysqlPool.query(`SELECT * FROM workers WHERE id =${workerId}`);
-        let updatedSalary = parseFloat(workerData[0].salaryDebt);
+        let updatedSalary = new Decimal(workerData[0].salaryDebt);
 
         // update worker updatedSalary by transactionType
         if (transactionType === '+') {
-            updatedSalary = workerData[0].salaryDebt + parseFloat(transactionAmount)
+            updatedSalary = updatedSalary.plus(new Decimal(transactionAmount));
         } else if (transactionType === '-') {
-            updatedSalary = workerData[0].salaryDebt - parseFloat(transactionAmount)
+            updatedSalary = updatedSalary.minus(new Decimal(transactionAmount));
         }
 
         // update db for worker salary
-        const [updateWorkerResult] = await connection.query('UPDATE workers SET salaryDebt = ? WHERE id = ?', [updatedSalary, workerId]);
+        const [updateWorkerResult] = await connection.query('UPDATE workers SET salaryDebt = ? WHERE id = ?', [updatedSalary.toNumber(), workerId]);
         const [createTransactionResult] = await connection.query('INSERT INTO workersTransactions (createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerName) VALUES (?, ?, ?, ?, ?, ?)', [createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerData[0].name]);
-        console.log("updateWorkerResult => " + updateWorkerResult);
-        console.log("createTransactionResult => " + createTransactionResult);
         if (!createTransactionResult || !updateWorkerResult) {
             return res.status(500).send({
                 success: false,

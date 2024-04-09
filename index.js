@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { userRoutes } from './routes/userRoutes.js';
 import { workerRoutes } from './routes/workerRoutes.js';
 import { customerRoutes } from './routes/customerRoutes.js';
+import { fabricSettingsRoutes } from './routes/fabricSettingsRoutes.js';
 
 const PORT = process.env.PORT;
 
@@ -16,6 +17,7 @@ app.use(morgan('dev'));
 app.use('/api/user/v1', userRoutes);
 app.use('/api/worker/v1', workerRoutes);
 app.use('/api/customer/v1', customerRoutes);
+app.use('/api/fabric-settings/v1', fabricSettingsRoutes);
 
 app.get('/', (req, res) => {
     res.status(200).json({
