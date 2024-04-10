@@ -1,6 +1,39 @@
 import { mysqlPool } from "../config/db.js";
 import Decimal from "decimal.js";
 
+const getMakeProductPageData = async(req, res) => {
+    try {
+        // run query
+        const [workerResponse] = await mysqlPool.query('SELECT * FROM workers');
+        const [workerTypesResponse] = await mysqlPool.query('SELECT * FROM workType');
+        const [polyesterTypesResponse] = await mysqlPool.query('SELECT * FROM sintifon');
+
+        if (!workerResponse && !workerTypesResponse && !polyesterTypesResponse) {
+            return res.status(500).send({
+                success: false,
+                message: "Fail to make db query",
+            });
+        } else {
+            return res.status(200).send({
+                success: true,
+                message: "All user records",
+                data: {
+                    "workerResponse": workerResponse,
+                    "workerTypesResponse": workerTypesResponse,
+                    "polyesterTypesResponse": polyesterTypesResponse
+                },
+            });
+        }
+    } catch (e) {
+        return res.status(404).send({
+            success: false,
+            message: "no records found",
+            data: e,
+        });
+    }
+}
+
+
 const createWorkType = async(req, res) => {
     try {
         let { name, workingPrice, sellingPrice } = req.body;
@@ -214,4 +247,4 @@ const updateSintifon = async(req, res) => {
     }
 }
 
-export { createSintifon, getAllSintifon, updateSintifon, createWorkType, getAllWorkerType, updateWorkType };
+export { createSintifon, getAllSintifon, updateSintifon, createWorkType, getAllWorkerType, updateWorkType, getMakeProductPageData };
