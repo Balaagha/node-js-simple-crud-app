@@ -7,8 +7,9 @@ const getMakeProductPageData = async(req, res) => {
         const [workerResponse] = await mysqlPool.query('SELECT * FROM workers');
         const [workerTypesResponse] = await mysqlPool.query('SELECT * FROM workType');
         const [polyesterTypesResponse] = await mysqlPool.query('SELECT * FROM sintifon');
+        const [customerResponse] = await mysqlPool.query('SELECT * FROM customers');
 
-        if (!workerResponse && !workerTypesResponse && !polyesterTypesResponse) {
+        if (!workerResponse && !workerTypesResponse && !polyesterTypesResponse && !customerResponse) {
             return res.status(500).send({
                 success: false,
                 message: "Fail to make db query",
@@ -18,6 +19,7 @@ const getMakeProductPageData = async(req, res) => {
                 success: true,
                 message: "All user records",
                 data: {
+                    "customerResponse": customerResponse,
                     "workerResponse": workerResponse,
                     "workerTypesResponse": workerTypesResponse,
                     "polyesterTypesResponse": polyesterTypesResponse
