@@ -84,6 +84,7 @@ const updateWorkType = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: `selected sintifon(${id}) is updated successfully`,
+                data: "success"
             });
         }
     } catch (e) {
@@ -179,6 +180,7 @@ const updateSintifon = async(req, res) => {
                 return res.status(400).send({
                     success: false,
                     message: 'No valid parameters provided for update.',
+                    data: "success"
                 });
             }
         }
