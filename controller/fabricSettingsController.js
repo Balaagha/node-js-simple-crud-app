@@ -189,7 +189,7 @@ const getMakeProductPageData = async(req, res) => {
         const [customerResponse] = await mysqlPool.query('SELECT * FROM customers');
         const parsedcustomerResponse = customerResponse.map(row => ({
             ...row,
-            data: row.data ? parseRowData(row) : null
+            data: row.data ? parseRowData(row.data) : null
         }));
 
         if (!workerResponse && !workerTypesResponse && !polyesterTypesResponse && !customerResponse) {
