@@ -41,6 +41,10 @@ const createCustomer = async(req, res) => {
 const getAllCustomer = async(req, res) => {
     try {
         const [rows] = await mysqlPool.query('SELECT * FROM customers');
+        const parsedRows = rows.map(row => ({
+            ...row,
+            data: row.data ? JSON.parse(row.data) : null
+        }));
         if (!rows) {
             return res.status(500).send({
                 success: false,
@@ -50,7 +54,7 @@ const getAllCustomer = async(req, res) => {
             return res.status(200).send({
                 success: false,
                 message: "All user records",
-                data: rows,
+                data: parsedRows,
             });
         }
     } catch (e) {
@@ -99,14 +103,15 @@ const createCustomerTransaction = async(req, res) => {
 
         // get selectedCustomer data
         const [customerData] = await mysqlPool.query(`SELECT * FROM customers WHERE id =${customerId}`);
-        let updatedDebt = parseFloat(customerData[0].debt);
+        let updatedDebt = new Decimal(customerData[0].debt);
 
         // update customer updatedDebt by transactionType
         if (transactionType === '+') {
-            updatedDebt = customerData[0].debt + parseFloat(transactionAmount)
+            updatedDebt = updatedDebt.plus(transactionAmount);
         } else if (transactionType === '-') {
-            updatedDebt = customerData[0].debt - parseFloat(transactionAmount)
+            updatedDebt = updatedDebt.minus(transactionAmount);
         }
+        updatedDebt = updatedDebt.toNumber();
 
         // update db for customer salary
         const [updateCustomerResult] = await connection.query('UPDATE customers SET debt = ? WHERE id = ?', [updatedDebt, customerId]);
