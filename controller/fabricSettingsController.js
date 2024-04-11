@@ -187,6 +187,10 @@ const getMakeProductPageData = async(req, res) => {
         const [workerTypesResponse] = await mysqlPool.query('SELECT * FROM workType');
         const [polyesterTypesResponse] = await mysqlPool.query('SELECT * FROM sintifon');
         const [customerResponse] = await mysqlPool.query('SELECT * FROM customers');
+        const parsedcustomerResponse = customerResponse.map(row => ({
+            ...row,
+            data: row.data ? JSON.parse(row.data) : null
+        }));
 
         if (!workerResponse && !workerTypesResponse && !polyesterTypesResponse && !customerResponse) {
             return res.status(500).send({
@@ -198,7 +202,7 @@ const getMakeProductPageData = async(req, res) => {
                 success: true,
                 message: "All user records",
                 data: {
-                    "customerResponse": customerResponse,
+                    "customerResponse": parsedcustomerResponse,
                     "workerResponse": workerResponse,
                     "workerTypesResponse": workerTypesResponse,
                     "polyesterTypesResponse": polyesterTypesResponse
@@ -216,8 +220,21 @@ const getMakeProductPageData = async(req, res) => {
 
 const getAllProducts = async(req, res) => {
     try {
-        const [rows] = await mysqlPool.query('SELECT * FROM productGroup');
-        if (!rows) {
+        const queryParams = [];
+        let query = 'SELECT * FROM productGroup WHERE 1=1';
+        if (req.query.fromTime && req.query.toTime) {
+            query += ' AND createdTime BETWEEN ? AND ?';
+            queryParams.push(req.query.fromTime, req.query.toTime);
+        }
+        if (req.query.customerId) {
+            query += ' AND customerId = ?';
+            queryParams.push(req.query.customerId);
+        }
+        query += ' ORDER BY createdTime DESC'
+
+        const [customerListResponse] = await mysqlPool.query('SELECT name, id FROM customers');
+        const [rows] = await mysqlPool.query(query, queryParams);
+        if (!rows || !customerListResponse) {
             return res.status(500).send({
                 success: false,
                 message: "Fail to make db operation",
@@ -230,7 +247,10 @@ const getAllProducts = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: "All user records",
-                data: parsedRows,
+                data: {
+                    "products": parsedRows,
+                    "customerList": customerListResponse,
+                },
             });
         }
     } catch (e) {
@@ -342,7 +362,21 @@ const makeSale = async(req, res) => {
 
 const getAllSales = async(req, res) => {
     try {
-        const [rows] = await mysqlPool.query('SELECT * FROM selling');
+        let query = 'SELECT * FROM selling WHERE 1=1';
+        const queryParams = [];
+        if (req.query.fromTime && req.query.toTime) {
+            query += ' AND createdTime BETWEEN ? AND ?';
+            queryParams.push(req.query.fromTime, req.query.toTime);
+        }
+        if (req.query.customerId) {
+            query += ' AND customerId = ?';
+            queryParams.push(req.query.customerId);
+        }
+        query += ' ORDER BY createdTime DESC'
+
+        const [customerListResponse] = await mysqlPool.query('SELECT name, id FROM customers');
+        const [rows] = await mysqlPool.query(query, queryParams);
+
         if (!rows) {
             return res.status(500).send({
                 success: false,
@@ -356,10 +390,14 @@ const getAllSales = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: "All user records",
-                data: parsedRows,
+                data: {
+                    "sales": parsedRows,
+                    "customerList": customerListResponse,
+                },
             });
         }
     } catch (e) {
+        console.dir(e);
         return res.status(404).send({
             success: false,
             message: "no records found",
