@@ -106,6 +106,9 @@ const makeProduct = async(req, res) => {
 
 async function updateCustomerData(connection, customerId, workingTypeId, selectedCustomerData, allWorkTypeData, productObject, flowType, salePrice) {
     // update making product count in selected customer data
+    console.dir(selectedCustomerData);
+    console.log("typeof selectedCustomerData: " + typeof selectedCustomerData);
+    console.log("typeof selectedCustomerData.data: " + typeof selectedCustomerData.data);
     const selectedCustomerDataField = selectedCustomerData.data ? JSON.parse(selectedCustomerData.data) : [];
     const updatedDataForselectedCustomerDataField = allWorkTypeData.map(workType => {
         const existingWorkType = selectedCustomerDataField.find(wt => wt.workTypeId === workType.id);
