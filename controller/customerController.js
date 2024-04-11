@@ -1,6 +1,14 @@
 import { mysqlPool } from "../config/db.js";
 import Decimal from "decimal.js";
 
+function parseRowData(data) {
+    if (typeof data === 'string') {
+        return JSON.parse(data);
+    } else {
+        return data
+    }
+}
+
 const createCustomer = async(req, res) => {
     try {
         let { name, debt, createdTime } = req.body;
@@ -43,7 +51,7 @@ const getAllCustomer = async(req, res) => {
         const [rows] = await mysqlPool.query('SELECT * FROM customers');
         const parsedRows = rows.map(row => ({
             ...row,
-            data: row.data ? JSON.parse(row.data) : null
+            data: row.data ? parseRowData(row.data) : null
         }));
         if (!rows) {
             return res.status(500).send({

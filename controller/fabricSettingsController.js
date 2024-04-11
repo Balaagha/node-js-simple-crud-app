@@ -189,7 +189,7 @@ const getMakeProductPageData = async(req, res) => {
         const [customerResponse] = await mysqlPool.query('SELECT * FROM customers');
         const parsedcustomerResponse = customerResponse.map(row => ({
             ...row,
-            data: row.data ? JSON.parse(row.data) : null
+            data: row.data ? parseRowData(row) : null
         }));
 
         if (!workerResponse && !workerTypesResponse && !polyesterTypesResponse && !customerResponse) {
@@ -219,6 +219,14 @@ const getMakeProductPageData = async(req, res) => {
     }
 }
 
+function parseRowData(data) {
+    if (typeof data === 'string') {
+        return JSON.parse(data);
+    } else {
+        return data
+    }
+}
+
 const getAllProducts = async(req, res) => {
     try {
         const queryParams = [];
@@ -243,7 +251,7 @@ const getAllProducts = async(req, res) => {
         } else {
             const parsedRows = rows.map(row => ({
                 ...row,
-                data: row.data ? JSON.parse(row.data) : null
+                data: row.data ? parseRowData(row.data) : null
             }));
             return res.status(200).send({
                 success: true,
@@ -386,7 +394,7 @@ const getAllSales = async(req, res) => {
         } else {
             const parsedRows = rows.map(row => ({
                 ...row,
-                data: row.data ? JSON.parse(row.data) : null
+                data: row.data ? parseRowData(row.data) : null
             }));
             return res.status(200).send({
                 success: true,
@@ -417,7 +425,7 @@ const getSaleById = async(req, res) => {
                 message: `Fail to make db operation`,
             });
         } else {
-            rows[0].data = rows[0].data ? JSON.parse(rows[0].data) : null
+            rows[0].data = rows[0].data ? parseRowData(rows[0].data) : null
             return res.status(200).send({
                 success: true,
                 message: `sale(${id}) record`,
