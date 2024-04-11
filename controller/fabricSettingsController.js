@@ -126,7 +126,7 @@ async function updateCustomerData(connection, customerId, workingTypeId, selecte
                 workTypeId: workType.id,
                 workTypeName: workType.name,
                 workTypeTotalCount: updatedTotalCount,
-                salePrice: salePrice ? salePrice : existingWorkType.salePrice
+                salePrice: salePrice ? salePrice : (existingWorkType ? existingWorkType.salePrice : 0)
             };
         }
 
