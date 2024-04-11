@@ -210,6 +210,7 @@ const getMakeProductPageData = async(req, res) => {
             });
         }
     } catch (e) {
+        console.dir(e);
         return res.status(404).send({
             success: false,
             message: "no records found",
