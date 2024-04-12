@@ -318,7 +318,7 @@ const makeSale = async(req, res) => {
         if (customerIdTo == customerIdFrom) {
             await updateCustomerData(connection, customerIdFrom, workingTypeId, selectedCustomeFromData, allWorkTypeData, productObject, "saleProduct", salePrice);
         } else {
-            selectedCustomeToData = await mysqlPool.query(`SELECT * FROM customers WHERE id =${customerIdTo}`);
+            let [selectedCustomeToData] = await mysqlPool.query(`SELECT * FROM customers WHERE id =${customerIdTo}`);
             selectedCustomeToData = selectedCustomeToData[0];
             await updateCustomerData(connection, customerIdFrom, workingTypeId, selectedCustomeFromData, allWorkTypeData, productObject, "saleProduct", salePrice);
             await updateCustomerData(connection, customerIdTo, workingTypeId, selectedCustomeToData, allWorkTypeData, productObject, "", salePrice);
