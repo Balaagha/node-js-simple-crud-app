@@ -353,7 +353,7 @@ const makeSale = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: `sale successfully created`,
-                data: "success"
+                data: result.insertId
             });
         }
     } catch (e) {
