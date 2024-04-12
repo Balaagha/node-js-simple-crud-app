@@ -378,7 +378,7 @@ const getAllSales = async(req, res) => {
             queryParams.push(req.query.fromTime, req.query.toTime);
         }
         if (req.query.customerId) {
-            query += ' AND customerId = ?';
+            query += ' AND customerToId = ?';
             queryParams.push(req.query.customerId);
         }
         query += ' ORDER BY createdTime DESC'
