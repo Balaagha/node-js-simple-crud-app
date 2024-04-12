@@ -328,6 +328,8 @@ const makeSale = async(req, res) => {
         productObject.selectedCustomerFromName = selectedCustomeFromData.name;
 
         // update customer data
+        console.dir("selectedCustomeToData: ");
+        console.dir(selectedCustomeToData);
         let updatedDebt = new Decimal(selectedCustomeToData.debt);
 
         // update customer updatedDebt by transactionType
