@@ -1,7 +1,15 @@
 import { mysqlPool } from "../config/db.js";
 import Decimal from "decimal.js";
 
+function divideAndRound(value, divisor, decimalPlaces) {
+    const result = new Decimal(value).dividedBy(divisor);
+    return Number(result.toFixed(decimalPlaces));
+}
 
+function multiplyAndRound(value, multiplier, decimalPlaces) {
+    const result = new Decimal(value).times(multiplier);
+    return Number(result.toFixed(decimalPlaces));
+}
 
 const makeProduct = async(req, res) => {
     let connection;
@@ -28,7 +36,6 @@ const makeProduct = async(req, res) => {
         let productObject = {}
         productObject.totalCount = new Decimal(0);
         productObject.caculatedCountList = "";
-        productObject.selectedWorkersName = "";
         productObject.selectedWorkTypeName = selectedWorkTypeData.name;
         productObject.selectedPolyesterName = selectedPolyesterData.name;
         productObject.selectedCustomerName = selectedCustomerData.name;
@@ -49,27 +56,34 @@ const makeProduct = async(req, res) => {
         }
 
         // fetch and update all workers data
-        const releatingWorkersIds = calculateWorkerProductCounts(products); // return { workerId: 1, count: 100 } in array
-        const selectedWorkerDataList = [];
-        for (const worker of releatingWorkersIds) {
-            const [workerData] = await mysqlPool.query(`SELECT * FROM workers WHERE id =${worker.workerId}`);
-            workerData[0].workingCount = worker.count;
-            const workingCountValue = new Decimal(worker.count).times(selectedWorkTypeData.workingPrice);
-            workerData[0].workingCount = worker.count;
-            workerData[0].workingCountValue = workingCountValue.toNumber();
-            workerData[0].salaryDebt = (new Decimal(workerData[0].salaryDebt).plus(workingCountValue)).toNumber();
-            selectedWorkerDataList.push(workerData[0]);
-            const transactionDesc = `Зарплата в размере ${workerData[0].workingCountValue} была добавлена ​​в соответствии с работой клиента ${selectedCustomerData.name} на ${workerData[0].workingCount} метров.`;
+        const releatingWorkersIds = calculateWorkerProductCounts(products, selectedWorkTypeData.workingPrice); // return { workerId: 1, count: 100 } in array
+
+        for (const workObj of releatingWorkersIds) {
+            const [workerSqlData] = await mysqlPool.query(`SELECT * FROM workers WHERE id =${workObj.workerId}`);
+
+            let transactionDesc = "| ";
+            let totalCount = 0;
+            let currentSalary = 0;
+            let totalSalary = 0;
+
+            workObj.workerData.forEach(work => {
+                const salary = multiplyAndRound(work.count, work.workingPrice, 2);
+                totalCount += work.count;
+                transactionDesc += `${work.count}м( ${work.workingPrice}₽) + `;
+                currentSalary += salary;
+            })
+
+            totalSalary = (new Decimal(workerSqlData[0].salaryDebt).plus(currentSalary)).toNumber();
+            transactionDesc = transactionDesc.slice(0, -2);
+            transactionDesc += " | "
+
+            transactionDesc += `Зарплата ${currentSalary}₽ была добавлена для ${totalCount} метров работы. | общая зарплата: ${totalSalary}₽ | Клиент:  ${selectedCustomerData.name} |`;
+
             // update db for worker salary
-            const [updateWorkerResult] = await connection.query('UPDATE workers SET salaryDebt = ? WHERE id = ?', [workerData[0].salaryDebt, worker.workerId]);
-            const [createTransactionResult] = await connection.query('INSERT INTO workersTransactions (createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerName) VALUES (?, ?, ?, ?, ?, ?)', [createdTime, workerData[0].workingCountValue, "+", transactionDesc, worker.workerId, workerData[0].name]);
+            const [updateWorkerResult] = await connection.query('UPDATE workers SET salaryDebt = ? WHERE id = ?', [totalSalary, workObj.workerId]);
+            const [createTransactionResult] = await connection.query('INSERT INTO workersTransactions (createdTime, transactionAmount, transactionType, transactionDesc, workerId, workerName) VALUES (?, ?, ?, ?, ?, ?)', [createdTime, currentSalary, "+", transactionDesc, workObj.workerId, workerSqlData[0].name]);
             if (!updateWorkerResult || !createTransactionResult) {
                 return genericErrorHandler(res);
-            }
-            if (productObject.selectedWorkersName == "") {
-                productObject.selectedWorkersName += `${workerData[0].name}(${worker.count} м, ${workerData[0].workingCountValue}Р)`;
-            } else {
-                productObject.selectedWorkersName += `, ${workerData[0].name}(${worker.count} м, ${workerData[0].workingCountValue}Р)`;
             }
         }
 
@@ -106,8 +120,21 @@ const makeProduct = async(req, res) => {
 
 async function updateCustomerData(connection, customerId, workingTypeId, selectedCustomerData, allWorkTypeData, productObject, flowType, salePrice) {
     // update making product count in selected customer data
-    console.dir("selectedCustomerData in updateCustomerData");
+    console.dir("__________________________________________________________________start_______________________________________________________________________________________");
+    console.dir("customerId: " + customerId);
+    console.dir("workingTypeId: " + workingTypeId);
+    console.dir("flowType: " + flowType);
+    console.dir("salePrice: " + salePrice);
+
+    console.dir("selectedCustomerData: ");
     console.dir(selectedCustomerData);
+    console.dir("allWorkTypeData: ");
+    console.dir(allWorkTypeData);
+    productObject.caculatedCountListArray = productObject.caculatedCountList.split(', ');
+    console.dir("productObject.caculatedCountListArray: ");
+    console.dir(productObject.caculatedCountListArray);
+
+    console.dir("___________________________________________________________________end________________________________________________________________________________________");
 
     let selectedCustomerDataField = [];
     if (selectedCustomerData.data) {
@@ -119,23 +146,43 @@ async function updateCustomerData(connection, customerId, workingTypeId, selecte
     }
     const updatedDataForselectedCustomerDataField = allWorkTypeData.map(workType => {
         const existingWorkType = selectedCustomerDataField.find(wt => wt.workTypeId === workType.id);
+
+
         if (workType.id === workingTypeId) {
             // Eğer bu çalışma tipi güncellenmek isteniyorsa
             let updatedTotalCount = 0;
+            let workTypeCountList = existingWorkType?.workTypeCountList ?? [];
+
+            console.dir("existingWorkType: ");
+            console.dir(existingWorkType);
+            console.dir("workTypeCountList: ");
+            console.dir(workTypeCountList);
+
             if (flowType == "makeProduct") {
+
                 updatedTotalCount = existingWorkType ?
                     (new Decimal((existingWorkType.workTypeTotalCount || 0)).plus(productObject.totalCount)).toNumber() : productObject.totalCount.toNumber();
+                workTypeCountList = workTypeCountList.concat(productObject.caculatedCountListArray);
             } else if (flowType == "saleProduct") {
                 updatedTotalCount = existingWorkType ?
                     (new Decimal((existingWorkType.workTypeTotalCount || 0)).minus(productObject.totalCount)).toNumber() : (new Decimal(0).minus(productObject.totalCount)).toNumber();
+                productObject.caculatedCountListArray.forEach(element => {
+                    if (workTypeCountList) {
+                        const index = workTypeCountList.indexOf(element);
+                        if (index !== -1) {
+                            workTypeCountList.splice(index, 1); // Eşleşen elemanı workTypeCountList dizisinden çıkar
+                        }
+                    }
+
+                });
             } else {
                 updatedTotalCount = existingWorkType ? existingWorkType.workTypeTotalCount : 0;
             }
-
             return {
                 workTypeId: workType.id,
                 workTypeName: workType.name,
                 workTypeTotalCount: updatedTotalCount,
+                workTypeCountList: workTypeCountList,
                 salePrice: salePrice ? salePrice : (existingWorkType ? existingWorkType.salePrice : 0)
             };
         }
@@ -148,35 +195,43 @@ async function updateCustomerData(connection, customerId, workingTypeId, selecte
         return {
             workTypeId: workType.id,
             workTypeName: workType.name,
+            workTypeCountList: null,
             workTypeTotalCount: null,
             salePrice: null
         };
     });
 
     await connection.query('UPDATE customers SET data = ? WHERE id = ?', [JSON.stringify(updatedDataForselectedCustomerDataField), customerId]);
-
 }
 
-function calculateWorkerProductCounts(products) {
-    const workerCounts = new Map();
+function calculateWorkerProductCounts(products, workingPrice) {
+
+    const workerDataMap = new Map();
+
     products.forEach(product => {
+        const roundedPrice = divideAndRound(workingPrice, product.workersIds.length, 2);
+        console.log("typeof roundedPrice: " + typeof roundedPrice);
+        console.log("typeof product.workersIds.length: " + typeof product.workersIds.length);
+        console.log("typeof workingPrice: " + typeof workingPrice);
+
         product.workersIds.forEach(workerId => {
-            // Eğer işçi daha önce eklendiyse, mevcut değeri al ve güncelle
-            if (workerCounts.has(workerId)) {
-                workerCounts.set(workerId, new Decimal(workerCounts.get(workerId)).plus(new Decimal(product.productCount)).toNumber());
+            var workerData = {
+                workerId: workerId,
+                count: product.productCount,
+                workingPrice: roundedPrice
+            }
+            if (workerDataMap.has(workerId)) {
+                workerDataMap.get(workerId).push(workerData);
             } else {
-                // İşçi daha önce eklenmediyse, yeni bir giriş yap
-                workerCounts.set(workerId, product.productCount);
+                workerDataMap.set(workerId, [workerData]);
             }
         });
     });
-
     // Map'i istenen formata dönüştür
-    const result = Array.from(workerCounts, ([workerId, count]) => ({
+    const result = Array.from(workerDataMap, ([workerId, workerData]) => ({
         workerId,
-        count
+        workerData
     }));
-
     return result;
 }
 

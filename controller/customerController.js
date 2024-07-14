@@ -77,6 +77,7 @@ const getCustomerById = async(req, res) => {
     try {
         const id = req.params.id;
         const [rows] = await mysqlPool.query(`SELECT * FROM customers WHERE id =${id}`);
+        
         if (!rows) {
             return res.status(404).send({
                 success: false,
@@ -86,7 +87,10 @@ const getCustomerById = async(req, res) => {
             return res.status(200).send({
                 success: true,
                 message: `user(${id}) record`,
-                data: rows[0],
+                data: {
+                    ...rows[0],
+                    data: rows[0].data ? parseRowData(rows[0].data) : null
+                }
             });
         }
     } catch (e) {
